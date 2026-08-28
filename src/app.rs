@@ -1,3 +1,8 @@
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct MidiSettings {
+    pub is_open: bool
+}
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -7,6 +12,8 @@ pub struct TemplateApp {
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
+
+    midi_settings: MidiSettings
 }
 
 impl Default for TemplateApp {
@@ -15,6 +22,7 @@ impl Default for TemplateApp {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
+            midi_settings: MidiSettings { is_open: false }
         }
     }
 }
@@ -60,14 +68,22 @@ impl eframe::App for TemplateApp {
                     });
                     ui.add_space(16.0);
                 }
+                ui.toggle_value(&mut self.midi_settings.is_open, "MIDI");
 
                 egui::widgets::global_theme_preference_buttons(ui);
             });
         });
 
+        egui::Panel::left("midi_settings_panel")
+            .resizable(false)
+            .show_collapsible(ui, &mut self.midi_settings.is_open, |ui| {
+                
+            });
+            
+
         egui::CentralPanel::default().show(ui, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
+            ui.heading("input2microcosm");
 
             ui.horizontal(|ui| {
                 ui.label("Write something: ");
@@ -82,7 +98,7 @@ impl eframe::App for TemplateApp {
             ui.separator();
 
             ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
+                "https://github.com/systemviin/input2microcosm",
                 "Source code."
             ));
 
