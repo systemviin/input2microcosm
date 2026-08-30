@@ -1,6 +1,12 @@
+use midir::{MidiOutput, MidiOutputPort};
+
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MidiSettings {
-    pub is_open: bool
+    pub is_open: bool,    
+    
+    #[serde(skip)]
+    pub midi_out_ports: Vec<String>,
+    pub selected_midi: String
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -13,16 +19,28 @@ pub struct TemplateApp {
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
 
-    midi_settings: MidiSettings
+    midi_settings: MidiSettings,
+    #[serde(skip)]
+    midi_out: MidiOutput
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
+        let midi_out = MidiOutput::new("input2microcosm").unwrap();
+        let midi_ports = midi_out.ports().iter().map(|p| {
+            midi_out.port_name(p).unwrap()
+        }).collect();
+
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
-            midi_settings: MidiSettings { is_open: false }
+            midi_out: midi_out,
+            midi_settings: MidiSettings { 
+                is_open: false, 
+                midi_out_ports: midi_ports,
+                selected_midi: "".to_owned()
+             }
         }
     }
 }
@@ -77,7 +95,18 @@ impl eframe::App for TemplateApp {
         egui::Panel::left("midi_settings_panel")
             .resizable(false)
             .show_collapsible(ui, &mut self.midi_settings.is_open, |ui| {
-                
+                //show dropdown with available MIDI connections
+                let selected_midi = &self.midi_settings.selected_midi;
+                let mut index = 0;
+                egui::ComboBox::from_label("MIDI")
+                    .selected_text(format!("{selected_midi}")) // todo: restore from storage
+                    .show_ui(ui, |ui| {
+                        self.midi_settings.midi_out_ports.iter().for_each(|p| {
+                            ui.selectable_value(&mut self.midi_settings.selected_midi, index.to_string(), p);
+                            index = index + 1;
+                        });
+                    });
+                    
             });
             
 
