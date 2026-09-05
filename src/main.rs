@@ -22,7 +22,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "input2microcosm",
         native_options,
-        Box::new(|cc| Ok(Box::new(input2microcosm::TemplateApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(input2microcosm::Input2MicrocosmApp::new(cc)))),
     )
 }
 

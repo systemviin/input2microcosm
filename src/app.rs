@@ -2,50 +2,35 @@ use midir::{MidiOutput, MidiOutputPort};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MidiSettings {
-    pub is_open: bool,    
-    
     #[serde(skip)]
     pub midi_out_ports: Vec<String>,
-    pub selected_midi: String
+    pub selected_midi: String,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
-
+pub struct Input2MicrocosmApp {
     midi_settings: MidiSettings,
     #[serde(skip)]
-    midi_out: MidiOutput
+    midi_out: MidiOutput,
 }
 
-impl Default for TemplateApp {
+impl Default for Input2MicrocosmApp {
     fn default() -> Self {
         let midi_out = MidiOutput::new("input2microcosm").unwrap();
-        let midi_ports = midi_out.ports().iter().map(|p| {
-            midi_out.port_name(p).unwrap()
-        }).collect();
-
+        
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
             midi_out: midi_out,
-            midi_settings: MidiSettings { 
-                is_open: false, 
-                midi_out_ports: midi_ports,
-                selected_midi: "".to_owned()
-             }
+            midi_settings: MidiSettings {
+                midi_out_ports: Vec::new(),
+                selected_midi: String::new(),
+            },
         }
     }
 }
 
-impl TemplateApp {
+impl Input2MicrocosmApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -53,15 +38,27 @@ impl TemplateApp {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
+        let mut app: Input2MicrocosmApp = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
             Default::default()
-        }
+        };
+
+        app.refresh_midi_ports();
+        app
+    }
+
+    fn refresh_midi_ports(&mut self) {
+        self.midi_settings.midi_out_ports = self
+            .midi_out
+            .ports()
+            .iter()
+            .map(|p| self.midi_out.port_name(p).unwrap())
+            .collect();
     }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for Input2MicrocosmApp {
     /// Called by the framework to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -72,69 +69,27 @@ impl eframe::App for TemplateApp {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
-        egui::Panel::top("top_panel").show(ui, |ui| {
-            // The top panel is often a good place for a menu bar:
-
-            egui::MenuBar::new().ui(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ui.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
+        egui::Panel::top("top_panel").show(ui, |ui| {            
+            ui.horizontal(|ui| {
+                ui.label("Select MIDI Output: ");
+                egui::ComboBox::from_id_salt("MIDI picker")
+                    .selected_text(&self.midi_settings.selected_midi)
+                    .show_ui(ui, |ui| {
+                        self.midi_settings.midi_out_ports.iter().for_each(|p| {
+                            ui.selectable_value(
+                                &mut self.midi_settings.selected_midi,
+                                p.clone(),
+                                p,
+                            );
+                        });
                     });
-                    ui.add_space(16.0);
-                }
-                ui.toggle_value(&mut self.midi_settings.is_open, "MIDI");
-
-                egui::widgets::global_theme_preference_buttons(ui);
             });
         });
 
-        egui::Panel::left("midi_settings_panel")
-            .resizable(false)
-            .show_collapsible(ui, &mut self.midi_settings.is_open, |ui| {
-                //show dropdown with available MIDI connections
-                let selected_midi = &self.midi_settings.selected_midi;
-                let mut index = 0;
-                egui::ComboBox::from_label("MIDI")
-                    .selected_text(format!("{selected_midi}")) // todo: restore from storage
-                    .show_ui(ui, |ui| {
-                        self.midi_settings.midi_out_ports.iter().for_each(|p| {
-                            ui.selectable_value(&mut self.midi_settings.selected_midi, index.to_string(), p);
-                            index = index + 1;
-                        });
-                    });
-                    
-            });
-            
-
         egui::CentralPanel::default().show(ui, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("input2microcosm");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
+            if ui.button("Start").clicked() {
+                println!("wow");
             }
-
-            ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/systemviin/input2microcosm",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-            });
         });
     }
 }
