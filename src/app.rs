@@ -1,4 +1,4 @@
-use midir::{MidiOutput, MidiOutputPort};
+use midir::MidiOutput;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MidiSettings {
@@ -14,18 +14,20 @@ pub struct Input2MicrocosmApp {
     midi_settings: MidiSettings,
     #[serde(skip)]
     midi_out: MidiOutput,
+    send_midi: bool,
 }
 
 impl Default for Input2MicrocosmApp {
     fn default() -> Self {
         let midi_out = MidiOutput::new("input2microcosm").unwrap();
-        
+
         Self {
             midi_out: midi_out,
             midi_settings: MidiSettings {
                 midi_out_ports: Vec::new(),
                 selected_midi: String::new(),
             },
+            send_midi: false,
         }
     }
 }
@@ -69,7 +71,7 @@ impl eframe::App for Input2MicrocosmApp {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
-        egui::Panel::top("top_panel").show(ui, |ui| {            
+        egui::Panel::top("top_panel").show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Select MIDI Output: ");
                 egui::ComboBox::from_id_salt("MIDI picker")
@@ -87,23 +89,20 @@ impl eframe::App for Input2MicrocosmApp {
         });
 
         egui::CentralPanel::default().show(ui, |ui| {
-            if ui.button("Start").clicked() {
-                println!("wow");
-            }
+            ui.centered_and_justified(|ui| {
+                egui::Frame::group(ui.style())
+                    .inner_margin(110.0)
+                    .show(ui, |ui| {
+                        let button_text = if self.send_midi {
+                            "Stop"
+                        } else {
+                            "Start"
+                        };
+                        if ui.button(button_text).clicked() {
+                            self.send_midi = !self.send_midi;
+                        };
+                    });
+            });
         });
     }
-}
-
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
 }
