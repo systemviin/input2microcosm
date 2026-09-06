@@ -1,4 +1,8 @@
+use std::collections::{HashMap, VecDeque};
+
 use midir::MidiOutput;
+
+use crate::microcosm_signal::MicrocosmSignal;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MidiSettings {
@@ -14,7 +18,10 @@ pub struct Input2MicrocosmApp {
     midi_settings: MidiSettings,
     #[serde(skip)]
     midi_out: MidiOutput,
+    #[serde(skip)]
     send_midi: bool,
+    #[serde(skip)]
+    to_send: HashMap<MicrocosmSignal, bool>
 }
 
 impl Default for Input2MicrocosmApp {
@@ -28,6 +35,7 @@ impl Default for Input2MicrocosmApp {
                 selected_midi: String::new(),
             },
             send_midi: false,
+            to_send: HashMap::new()
         }
     }
 }
@@ -58,12 +66,40 @@ impl Input2MicrocosmApp {
             .map(|p| self.midi_out.port_name(p).unwrap())
             .collect();
     }
+
+    fn determine_signal_out(&mut self, ctx: &egui::Context) {
+        ctx.input(|i| {
+            if i.key_pressed(egui::Key::A) {
+                self.to_send.insert(MicrocosmSignal::LooperRecord, true);
+            }
+        })
+    }
+
+    fn send_signals_out(&mut self) {
+        self.to_send.clone().iter().for_each(|(signal, send)| {
+            if send.clone() {
+                self.send_signal(signal);
+                self.to_send.insert(signal.clone(), false); //set back to false
+            }
+        });
+    }
+    
+    fn send_signal(&self, signal: &MicrocosmSignal) {
+        println!("{:?} {}", signal, signal.clone() as i32);
+    }
 }
 
 impl eframe::App for Input2MicrocosmApp {
     /// Called by the framework to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
+    }    
+
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {        
+        if self.send_midi {
+            self.determine_signal_out(ctx);
+            self.send_signals_out();
+        }
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.

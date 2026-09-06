@@ -2,3 +2,4 @@
 
 mod app;
 pub use app::Input2MicrocosmApp;
+mod microcosm_signal;
