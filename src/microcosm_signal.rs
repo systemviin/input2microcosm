@@ -2,4 +2,5 @@
 pub enum MicrocosmSignal {
     LooperRecord = 28,
     LooperPlay = 29,
+    LooperOverdub = 30
 }
