@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 use midir::MidiOutput;
 
@@ -19,9 +19,7 @@ pub struct Input2MicrocosmApp {
     #[serde(skip)]
     midi_out: MidiOutput,
     #[serde(skip)]
-    send_midi: bool,
-    #[serde(skip)]
-    to_send: HashMap<MicrocosmSignal, bool>
+    send_midi: bool
 }
 
 impl Default for Input2MicrocosmApp {
@@ -34,8 +32,7 @@ impl Default for Input2MicrocosmApp {
                 midi_out_ports: Vec::new(),
                 selected_midi: String::new(),
             },
-            send_midi: false,
-            to_send: HashMap::new()
+            send_midi: false
         }
     }
 }
@@ -67,21 +64,12 @@ impl Input2MicrocosmApp {
             .collect();
     }
 
-    fn determine_signal_out(&mut self, ctx: &egui::Context) {
+    fn send_signals_out(&mut self, ctx: &egui::Context) {
         ctx.input(|i| {
             if i.key_pressed(egui::Key::A) {
-                self.to_send.insert(MicrocosmSignal::LooperRecord, true);
+                self.send_signal(&MicrocosmSignal::LooperRecord);
             }
         })
-    }
-
-    fn send_signals_out(&mut self) {
-        self.to_send.clone().iter().for_each(|(signal, send)| {
-            if send.clone() {
-                self.send_signal(signal);
-                self.to_send.insert(signal.clone(), false); //set back to false
-            }
-        });
     }
     
     fn send_signal(&self, signal: &MicrocosmSignal) {
@@ -97,8 +85,7 @@ impl eframe::App for Input2MicrocosmApp {
 
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {        
         if self.send_midi {
-            self.determine_signal_out(ctx);
-            self.send_signals_out();
+            self.send_signals_out(ctx);
         }
     }
 
